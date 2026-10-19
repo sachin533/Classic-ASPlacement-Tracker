@@ -16,6 +16,11 @@
 '  which is what resets the result set to page 1.
 ' ---------------------------------------------------------------------------
 
+' Every page except login.asp / logout.asp / forgot.asp requires a session:
+' an anonymous visitor is sent to /login.asp with a 302 before any query
+' parameter is read (see inc\auth.asp).
+EnsureAuthenticated
+
 Dim searchRaw, statusRaw, statusFilter, requestedPage
 Dim result, apps, total, pages, page, firstNo, lastNo
 Dim rowCount, emptyTitle, emptyText, hasFilters, summaryHtml

@@ -10,6 +10,8 @@
 '         A bad or unknown id is a 404 either way.
 ' ---------------------------------------------------------------------------
 
+EnsureAuthenticated
+
 Dim id, rec, values, errors, updated
 id = ParseId(Request.QueryString("id"))
 

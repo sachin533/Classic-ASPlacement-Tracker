@@ -45,7 +45,7 @@ Sub RenderHeader()
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title><%= H(title) %></title>
-<link rel="stylesheet" href="/static/styles.css?v=3">
+<link rel="stylesheet" href="/static/styles.css?v=4">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%232563eb'/%3E%3Cpath d='M7 9h10v8H7z' fill='none' stroke='white' stroke-width='1.6'/%3E%3Cpath d='M10 9V7.6h4V9' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -76,6 +76,24 @@ Sub RenderHeader()
         <%= IconSearch() %>
       </button>
     </form>
+    <% End If %>
+
+    <% ' Session state comes from inc\auth.asp, pulled in by inc\helpers.asp.
+       ' Signed in: the account name plus a POST + CSRF sign-out.
+       ' Signed out: this only happens on the404 page or an error page,
+       ' because every other page redirects to /login.asp first. %>
+    <% If IsAuthenticated() Then %>
+    <div class="topbar-account">
+      <span class="account-name" title="Signed in as <%= H(AuthUsername()) %>">
+        <%= IconUser() %><span class="account-user"><%= H(AuthUsername()) %></span>
+      </span>
+      <form class="account-logout" method="post" action="/logout.asp">
+        <%= CsrfInput() %>
+        <button type="submit" class="account-logout-btn">Sign out</button>
+      </form>
+    </div>
+    <% Else %>
+    <a class="account-signin" href="/login.asp"><%= IconSignIn() %>Sign in</a>
     <% End If %>
   </div>
 </header>

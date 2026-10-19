@@ -6,8 +6,12 @@
   '
   '  This file MUST be the first include on every page: it switches the
   '  response to UTF-8 before any form field is read.
+  '
+  '  inc\auth.asp is pulled in HERE rather than by each page, so the login
+  '  gate, the session timeout and the signed-in indicator in the header are
+  '  available to every page exactly once (including the shared error page).
   '    ------------------------------------------------------------------------ %>
-
+<!--#include virtual="/inc/auth.asp" -->
 <%
 ' -- Response-wide UTF-8 -----------------------------------------------------
 Response.Buffer = True
@@ -15,7 +19,9 @@ Response.CodePage = 65001
 Response.Charset = "utf-8"
 On Error Resume Next
 Session.CodePage = 65001
-Session.Timeout = 30
+' Session lifetime is owned by inc\auth.asp: the ASP session must never
+' outlive the absolute limit the code enforces (see AuthSessionMinutes).
+Session.Timeout = AuthSessionMinutes()
 On Error GoTo 0
 
 ' -- Shared page state (read by inc\header.asp and inc\errorpage.asp) -------
@@ -399,6 +405,47 @@ Function IconCheck()
     IconCheck = "<svg class=""icon icon-sm"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" " & _
                 "stroke-width=""2.4"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"">" & _
                 "<polyline points=""20 6 9 17 4 12""/></svg>"
+End Function
+
+' --- icons used by the sign-in screens and the signed-in header -------------
+Function IconCap()
+    IconCap = "<svg class=""icon"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" " & _
+              "stroke-width=""1.9"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"">" & _
+              "<path d=""M22 10L12 5 2 10l10 5 10-5z""/><path d=""M6 12.5V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5""/>" & _
+              "<line x1=""22"" y1=""10"" x2=""22"" y2=""15""/></svg>"
+End Function
+
+Function IconColumns()
+    IconColumns = "<svg class=""icon"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" " & _
+                  "stroke-width=""1.8"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"">" & _
+                  "<rect x=""3"" y=""3"" width=""18"" height=""18"" rx=""2"" ry=""2""/>" & _
+                  "<line x1=""9"" y1=""3"" x2=""9"" y2=""21""/><line x1=""15"" y1=""3"" x2=""15"" y2=""21""/></svg>"
+End Function
+
+Function IconUser()
+    IconUser = "<svg class=""icon"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" " & _
+               "stroke-width=""1.8"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"">" & _
+               "<path d=""M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2""/><circle cx=""12"" cy=""7"" r=""4""/></svg>"
+End Function
+
+Function IconLock()
+    IconLock = "<svg class=""icon"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" " & _
+               "stroke-width=""1.8"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"">" & _
+               "<rect x=""3"" y=""11"" width=""18"" height=""11"" rx=""2"" ry=""2""/>" & _
+               "<path d=""M7 11V7a5 5 0 0 1 10 0v4""/></svg>"
+End Function
+
+Function IconSignIn()
+    IconSignIn = "<svg class=""icon"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" " & _
+                 "stroke-width=""2"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"">" & _
+                 "<path d=""M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4""/>" & _
+                 "<polyline points=""10 17 15 12 10 7""/><line x1=""15"" y1=""12"" x2=""3"" y2=""12""/></svg>"
+End Function
+
+Function IconShield()
+    IconShield = "<svg class=""icon"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" " & _
+                 "stroke-width=""1.9"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"">" & _
+                 "<path d=""M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z""/><polyline points=""9 12 11 14 15 10""/></svg>"
 End Function
 
 ' Navigation highlighting: which top-bar link is the current page.

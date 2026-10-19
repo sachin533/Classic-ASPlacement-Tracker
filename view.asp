@@ -7,6 +7,8 @@
 '  HTTP 404 through the shared error page.
 ' ---------------------------------------------------------------------------
 
+EnsureAuthenticated
+
 Dim id, rec
 id = ParseId(Request.QueryString("id"))
 If id < 0 Then NotFound()

@@ -17,6 +17,11 @@ If Request.ServerVariables("REQUEST_METHOD") <> "POST" Then
              "or the details page."
 End If
 
+' The method is checked first (405 answers nothing about the data), then the
+' session - so an anonymous POST cannot reach the delete path or its CSRF
+' check: it is simply sent to the sign-in page.
+EnsureAuthenticated
+
 RequireCsrf
 
 Dim id, rec, removed

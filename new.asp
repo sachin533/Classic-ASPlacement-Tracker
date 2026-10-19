@@ -9,6 +9,8 @@
 '  POST : validate, parameterised INSERT, then POST/Redirect/GET to view.asp
 ' ---------------------------------------------------------------------------
 
+EnsureAuthenticated
+
 Dim values, errors, isNewId
 Set values = Server.CreateObject("Scripting.Dictionary")
 Set errors = Server.CreateObject("Scripting.Dictionary")

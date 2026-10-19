@@ -43,6 +43,20 @@ $TestDb      = 'PlacementTracker_Test'
 $SchemaFile  = Join-Path $ProjectRoot 'db\schema.sql'
 $SeedFile    = Join-Path $ProjectRoot 'db\seed.sql'
 $Seed500File = Join-Path $ProjectRoot 'db\seed_500.sql'
+$AuthSqlFile = Join-Path $ProjectRoot 'db\auth.sql'
+$ProvisionScript = Join-Path $ProjectRoot 'db\provision_admin.ps1'
+
+# Credentials for THIS run only: random, held in memory, used against the
+# test database, never echoed.  Production accounts are provisioned by hand.
+$TestAdminUser     = 'admin'
+$TestAdminPassword = [guid]::NewGuid().ToString('N') + 'aA1!'
+
+# Idle session timeout for the throw-away instance, in seconds.  The default
+# (20 minutes) could not be tested without slowing the suite down by 20
+# minutes, so the test server is told to time out after 45s instead - long
+# enough that no ordinary gap between two requests in this suite reaches it,
+# and short enough that the timeout test below only has to wait 50s.
+$IdleSeconds = '45'
 
 $IisExpress = 'C:\Program Files\IIS Express\iisexpress.exe'
 if (-not (Test-Path $IisExpress)) { $IisExpress = 'C:\Program Files (x86)\IIS Express\iisexpress.exe' }
@@ -150,8 +164,22 @@ END
     $seedSql = (Get-Content -LiteralPath $SeedFile -Raw -Encoding UTF8) -replace 'PlacementTracker', $TestDb
     Exec-SqlScript -Database $TestDb -Path $SeedFile -Sql $seedSql
 
+    # Login protection lives in its own script, applied the same way it is in
+    # production (db\auth.sql), again with the database name substituted.
+    $authSql = (Get-Content -LiteralPath $AuthSqlFile -Raw -Encoding UTF8) -replace 'PlacementTracker', $TestDb
+    Exec-SqlScript -Database $TestDb -Path $AuthSqlFile -Sql $authSql
+
+    # Provision the account this suite signs in with, using the REAL
+    # provisioning script.  The password is generated per run and only ever
+    # lives in this process - it is never printed, never written to disk and
+    # the account exists only in PlacementTracker_Test.
+    & $ProvisionScript -Username $TestAdminUser -Password $TestAdminPassword `
+                       -Database $TestDb -SqlServer $SqlServer | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "provision_admin.ps1 failed with exit code $LASTEXITCODE" }
+
     $count = Scalar $TestDb 'SELECT COUNT(*) FROM dbo.Applications'
-    Write-Host "Ready - $TestDb.dbo.Applications has $count rows.`n" -ForegroundColor DarkGray
+    $users = Scalar $TestDb 'SELECT COUNT(*) FROM dbo.Users'
+    Write-Host "Ready - $TestDb.dbo.Applications has $count rows, dbo.Users has $users account(s).`n" -ForegroundColor DarkGray
 }
 
 function Reset-TestRows {
@@ -351,20 +379,27 @@ if (-not $SkipServerStart) {
     $cfgText = $cfgText -replace (':\d+:localhost'), (':{0}:localhost' -f $Port)
     Set-Content -LiteralPath $testConfig -Value $cfgText -Encoding UTF8
 
-    # Point this process (and the child iisexpress.exe) at the test database.
-    $env:PT_DB_SERVER = $SqlServer
-    $env:PT_DB_NAME   = $TestDb
+    # Point this process (and the child iisexpress.exe) at the test database,
+    # and shorten the idle session timeout so it can actually be exercised
+    # (see $IdleSeconds above).
+    $env:PT_DB_SERVER        = $SqlServer
+    $env:PT_DB_NAME          = $TestDb
+    $env:PT_AUTH_IDLE_SECONDS = $IdleSeconds
 
     Write-Host "Starting IIS Express on $BaseUrl (database: $TestDb)..." -ForegroundColor Cyan
     $proc = Start-Process -FilePath $IisExpress `
                           -ArgumentList @("/config:`"$testConfig`"", '/site:PlacementTracker') `
                           -PassThru -WindowStyle Hidden
-    $env:PT_DB_NAME = ''
+    $env:PT_DB_NAME           = ''
+    $env:PT_AUTH_IDLE_SECONDS = ''
 }
 
 $ready = $false
 for ($i = 0; $i -lt 80; $i++) {
-    if ((Invoke-Http -Url "$BaseUrl/").Code -eq 200) { $ready = $true; break }
+    # / redirects anonymous visitors to /login.asp, so the readiness probe
+    # asks for the sign-in page directly: it is the one page that must answer
+    # 200 without a session.
+    if ((Invoke-Http -Url "$BaseUrl/login.asp").Code -eq 200) { $ready = $true; break }
     Start-Sleep -Milliseconds 500
 }
 
